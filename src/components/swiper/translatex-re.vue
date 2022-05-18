@@ -49,11 +49,11 @@ export default {
   name: 'translateX',
   data() {
     return {
+      paddingLeft: 9,
       swiperInfo: {
         wrapperInfo: [{ translate: 0 }, { translate: 0 }, { translate: 0 }],
         start: 0,
         end: 0,
-        correction: 0,
         max: 0
       },
       translateStart: 0,
@@ -63,6 +63,9 @@ export default {
   computed: {
     wrapperInfo() {
       return this.swiperInfo.wrapperInfo
+    },
+    wrapperMain() {
+      return this.wrapperInfo.filter(({ isMain }) => isMain)[0]
     }
   },
   mounted() {
@@ -85,31 +88,29 @@ export default {
       this.removeEvent(translateSwiper, 'touchmove')
       this.removeEvent(translateSwiper, 'touchend')
 
-      this.addEvent(translateSwiper, 'touchstart', this.onTouchStart)
-      this.addEvent(translateSwiper, 'touchmove', this.onTouchMove)
-      this.addEvent(translateSwiper, 'touchend', this.onTouchEnd)
+      this.addEvent(translateSwiper, 'touchstart', this.onTouchStart, false)
+      this.addEvent(translateSwiper, 'touchmove', this.onTouchMove, false)
+      this.addEvent(translateSwiper, 'touchend', this.onTouchEnd, false)
 
       translateSwiper
         .querySelectorAll('.slide-wrapper')
         .forEach((node, idx) => {
           this.wrapperInfo[idx].width = node.offsetWidth
         })
-      this.swiperInfo.max = Math.max(
-        ...this.wrapperInfo.map(({ width }) => width)
-      )
-      this.swiperInfo.end =
-        this.swiperInfo.max -
-        translateSwiper.offsetWidth +
-        this.swiperInfo.correction
+      const swiperMax = Math.max(...this.wrapperInfo.map(({ width }) => width))
+      this.swiperInfo.max = swiperMax
+      this.swiperInfo.end = swiperMax - translateSwiper.offsetWidth
       this.wrapperInfo.forEach(wrapper => {
-        wrapper.isMain = wrapper.width / this.swiperInfo.max === 1
-        wrapper.gap = this.swiperInfo.max - wrapper.width
+        wrapper.isMain = wrapper.width / swiperMax === 1
+        wrapper.gap = swiperMax - wrapper.width
       })
     },
     onTouchStart(evt) {
       this.translateStart =
         this.getChangeTranslate(evt, 'touches') +
-        this.wrapperInfo.filter(({ isMain }) => isMain)[0].translate * -1
+        this.wrapperMain.translate * -1 -
+        this.paddingLeft
+      // padding left가 8임
     },
     onTouchMove(evt) {
       this.setTranslateX(this.getChangeTranslate(evt))
@@ -119,13 +120,11 @@ export default {
       this.translateStart = null
     },
     getChangeTranslate(evt, target = 'changedTouches') {
-      let pageX
-      if (evt.type.includes('drag')) {
-        pageX = evt.pageX
-      } else {
-        pageX = evt[target][0].pageX
-      }
+      const { pageX } = evt[target][0]
       return (this.translateStart - pageX) * -1
+    },
+    getDirection() {
+      this.wrapperInfo.filter(({ isMain }) => isMain)[0].translate
     },
     setTranslateX(changeTranslate, isEnd = false) {
       const { start, end } = this.swiperInfo
@@ -143,12 +142,22 @@ export default {
       } else if (changeTranslate < -end || !isEnd) {
         changeTranslate = isEnd ? -end : changeTranslate
         let translate = changeTranslate
+
+        const direction =
+          this.wrapperMain.translate >= changeTranslate ? 'left' : 'right'
+
         wrapperInfo.forEach(wrapper => {
           if (!wrapper.isMain) {
             const ratio = isEnd ? 1 : Math.abs(left / end)
             translate = changeTranslate + wrapper.gap * (ratio > 1 ? 1 : ratio)
+            if (direction === 'left' && translate > wrapper.translate) {
+              translate = Number(wrapper.translate)
+            } else if (direction === 'right' && translate < wrapper.translate) {
+              translate = Number(wrapper.translate)
+            }
           }
-          wrapper.translate = translate
+
+          wrapper.translate = translate.toFixed(2)
         })
       }
     }
@@ -166,10 +175,12 @@ export default {
   -moz-user-select: none;
   -ms-user-select: none;
   user-select: none;
-
   & .slide-wrapper {
     display: flex;
     width: fit-content;
+    transition-duration: 0ms;
+    transition-property: transform;
+    transform-origin: 100% 100%;
     & button {
       white-space: nowrap;
       font-size: 30px;
