@@ -43,13 +43,10 @@
 </template>
 
 <script>
-import throttle from 'lodash/throttle'
-
 export default {
-  name: 'translateX',
+  name: 'translateXRe',
   data() {
     return {
-      paddingLeft: 9,
       swiperInfo: {
         wrapperInfo: [{ translate: 0 }, { translate: 0 }, { translate: 0 }],
         start: 0,
@@ -57,7 +54,9 @@ export default {
         max: 0
       },
       translateStart: 0,
-      events: {}
+      events: {},
+      bodyPadding: 16,
+      beforeChangeTranslate: null
     }
   },
   computed: {
@@ -72,6 +71,8 @@ export default {
     this.init()
   },
   methods: {
+    // throttle을 걸어볼까 했는데...
+    // throttle waiting 중 touchend로 가게 되면 그 시간동안 이동을 보정해 주는 로직이 추가 필요...
     addEvent(el, name, fn) {
       el.addEventListener(name, this.setEvent(name, fn))
     },
@@ -106,58 +107,82 @@ export default {
       })
     },
     onTouchStart(evt) {
+      evt.preventDefault()
       this.translateStart =
         this.getChangeTranslate(evt, 'touches') +
-        this.wrapperMain.translate * -1 -
-        this.paddingLeft
-      // padding left가 8임
+        this.wrapperMain.translate * -1
     },
     onTouchMove(evt) {
+      evt.preventDefault()
       this.setTranslateX(this.getChangeTranslate(evt))
     },
     onTouchEnd(evt) {
-      this.setTranslateX(this.getChangeTranslate(evt), true)
+      evt.preventDefault()
+      this.setTranslateXEnd(this.getChangeTranslate(evt))
       this.translateStart = null
     },
     getChangeTranslate(evt, target = 'changedTouches') {
       const { pageX } = evt[target][0]
       return (this.translateStart - pageX) * -1
     },
-    getDirection() {
-      this.wrapperInfo.filter(({ isMain }) => isMain)[0].translate
+    setTranslateX(changeTranslate) {
+      if (this.beforeChangeTranslate !== changeTranslate) {
+        const { start, end } = this.swiperInfo
+        const wrapperInfo = this.wrapperInfo
+        const { left } =
+          this.$refs.translateSwiper.children[
+            wrapperInfo.findIndex(({ isMain }) => isMain)
+          ].getBoundingClientRect()
+        let ratio = Math.abs((left - this.bodyPadding) / end)
+        ratio = ratio > 1 ? 1 : ratio
+
+        // 화면보다 왼쪽으로 더 갔을 때
+        if (changeTranslate > start) {
+          wrapperInfo.forEach(wrapper => {
+            wrapper.translate = changeTranslate
+          })
+        } else if (changeTranslate < -end) {
+          wrapperInfo.forEach(wrapper => {
+            wrapper.translate = (changeTranslate + wrapper.gap * ratio).toFixed(
+              2
+            )
+          })
+        } else {
+          let translate = changeTranslate
+
+          const { translate: mainTranslate } = this.wrapperMain
+          const direction = mainTranslate >= changeTranslate ? 'left' : 'right'
+
+          wrapperInfo.forEach(wrapper => {
+            const { translate: wrapTranslate, isMain, gap } = wrapper
+            if (!isMain) {
+              translate = changeTranslate + gap * ratio
+
+              if (
+                (direction === 'left' && translate > wrapTranslate) ||
+                (direction === 'right' && translate < wrapTranslate)
+              ) {
+                translate = Number(wrapTranslate)
+              }
+            }
+            wrapper.translate = translate.toFixed(2)
+          })
+        }
+        this.beforeChangeTranslate = changeTranslate
+      }
     },
-    setTranslateX(changeTranslate, isEnd = false) {
+    setTranslateXEnd(changeTranslate) {
       const { start, end } = this.swiperInfo
       const wrapperInfo = this.wrapperInfo
-      const { left } =
-        this.$refs.translateSwiper.children[
-          wrapperInfo.findIndex(({ isMain }) => isMain)
-        ].getBoundingClientRect()
 
       // 화면보다 왼쪽으로 더 갔을 때
       if (changeTranslate > start) {
         wrapperInfo.forEach(wrapper => {
-          wrapper.translate = isEnd ? start : changeTranslate
+          wrapper.translate = start
         })
-      } else if (changeTranslate < -end || !isEnd) {
-        changeTranslate = isEnd ? -end : changeTranslate
-        let translate = changeTranslate
-
-        const direction =
-          this.wrapperMain.translate >= changeTranslate ? 'left' : 'right'
-
+      } else if (changeTranslate < -end) {
         wrapperInfo.forEach(wrapper => {
-          if (!wrapper.isMain) {
-            const ratio = isEnd ? 1 : Math.abs(left / end)
-            translate = changeTranslate + wrapper.gap * (ratio > 1 ? 1 : ratio)
-            if (direction === 'left' && translate > wrapper.translate) {
-              translate = Number(wrapper.translate)
-            } else if (direction === 'right' && translate < wrapper.translate) {
-              translate = Number(wrapper.translate)
-            }
-          }
-
-          wrapper.translate = translate.toFixed(2)
+          wrapper.translate = (-end + wrapper.gap).toFixed(2)
         })
       }
     }
