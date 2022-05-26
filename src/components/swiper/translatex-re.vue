@@ -155,9 +155,8 @@ export default {
 
           wrapperInfo.forEach(wrapper => {
             const { translate: wrapTranslate, isMain, gap } = wrapper
+            translate = changeTranslate + gap * ratio
             if (!isMain) {
-              translate = changeTranslate + gap * ratio
-
               if (
                 (direction === 'left' && translate > wrapTranslate) ||
                 (direction === 'right' && translate < wrapTranslate)
