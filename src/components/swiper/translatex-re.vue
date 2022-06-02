@@ -155,7 +155,6 @@ export default {
               wrapper.translate = changeTranslate + wrapper.gap * ratio
             })
           }
-          console.log(changeTranslate, this.limitEnd)
         } else {
           let translate = changeTranslate
 
