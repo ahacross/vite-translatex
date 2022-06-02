@@ -9,6 +9,7 @@
     <br />
     <br />
     <SwiperTranslateXRe />
+    <div style="width: 1px; padding-left: 180.5px">1</div>
   </div>
 </template>
 

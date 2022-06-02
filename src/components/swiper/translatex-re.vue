@@ -65,6 +65,12 @@ export default {
     },
     wrapperMain() {
       return this.wrapperInfo.filter(({ isMain }) => isMain)[0]
+    },
+    limitStart() {
+      return innerWidth / 2 - this.bodyPadding
+    },
+    limitEnd() {
+      return innerWidth / 2 - this.bodyPadding + this.swiperInfo.end
     }
   },
   mounted() {
@@ -138,15 +144,18 @@ export default {
 
         // 화면보다 왼쪽으로 더 갔을 때
         if (changeTranslate > start) {
-          wrapperInfo.forEach(wrapper => {
-            wrapper.translate = changeTranslate
-          })
+          if (changeTranslate < this.limitStart) {
+            wrapperInfo.forEach(wrapper => {
+              wrapper.translate = changeTranslate
+            })
+          }
         } else if (changeTranslate < -end) {
-          wrapperInfo.forEach(wrapper => {
-            wrapper.translate = (changeTranslate + wrapper.gap * ratio).toFixed(
-              2
-            )
-          })
+          if (changeTranslate > -this.limitEnd) {
+            wrapperInfo.forEach(wrapper => {
+              wrapper.translate = changeTranslate + wrapper.gap * ratio
+            })
+          }
+          console.log(changeTranslate, this.limitEnd)
         } else {
           let translate = changeTranslate
 
