@@ -7,15 +7,7 @@
       :style="`transform: translateX(${wrapperInfo[0].translate}px)`"
     >
       <button>Slide 1</button>
-      <button>Slide 슬라이드 2</button>
-      <button>Slide 슬라 3</button>
-      <button>Slide 4</button>
-      <button>Slide 슬라이 5</button>
-      <button>Slide 1</button>
-      <button>Slide 슬라이드 2</button>
-      <button>Slide 슬라 3</button>
-      <button>Slide 4</button>
-      <button>Slide 슬라이 5</button>
+      <!--      <button>Slide 슬라이드 2</button>-->
     </div>
     <div
       class="slide-wrapper"
@@ -38,6 +30,14 @@
       <button>Slide 33</button>
       <button>Slide 34</button>
       <button>Slide 35</button>
+      <button>Slide 슬라 3</button>
+      <button>Slide 4</button>
+      <button>Slide 슬라이 5</button>
+      <button>Slide 1</button>
+      <button>Slide 슬라이드 2</button>
+      <button>Slide 슬라 3</button>
+      <button>Slide 4</button>
+      <button>Slide 슬라이 5</button>
     </div>
   </div>
 </template>
@@ -56,7 +56,7 @@ export default {
       translateStart: 0,
       events: {},
       bodyPadding: 16,
-      beforeChangeTranslate: null
+      beforeDirection: null
     }
   },
   computed: {
@@ -125,57 +125,50 @@ export default {
     onTouchEnd(evt) {
       evt.preventDefault()
       this.setTranslateXEnd(this.getChangeTranslate(evt))
-      this.translateStart = null
+      this.translateStart = 0
     },
     getChangeTranslate(evt, target = 'changedTouches') {
       const { pageX } = evt[target][0]
       return (this.translateStart - pageX) * -1
     },
     setTranslateX(changeTranslate) {
-      if (this.beforeChangeTranslate !== changeTranslate) {
-        const { start, end } = this.swiperInfo
-        const wrapperInfo = this.wrapperInfo
-        const { left } =
-          this.$refs.translateSwiper.children[
-            wrapperInfo.findIndex(({ isMain }) => isMain)
-          ].getBoundingClientRect()
-        let ratio = Math.abs((left - this.bodyPadding) / end)
-        ratio = ratio > 1 ? 1 : ratio
+      const { start, end } = this.swiperInfo
+      const wrapperInfo = this.wrapperInfo
+      const { left } =
+        this.$refs.translateSwiper.children[
+          wrapperInfo.findIndex(({ isMain }) => isMain)
+        ].getBoundingClientRect()
+      let ratio = Math.abs((left - this.bodyPadding) / end)
+      // let ratio = Math.abs(left / end)
+      ratio = ratio > 1 ? 1 : ratio
+      let direction
 
-        // 화면보다 왼쪽으로 더 갔을 때
-        if (changeTranslate > start) {
-          if (changeTranslate < this.limitStart) {
-            wrapperInfo.forEach(wrapper => {
-              wrapper.translate = changeTranslate
-            })
-          }
-        } else if (changeTranslate < -end) {
-          if (changeTranslate > -this.limitEnd) {
-            wrapperInfo.forEach(wrapper => {
-              wrapper.translate = changeTranslate + wrapper.gap * ratio
-            })
-          }
-        } else {
-          let translate = changeTranslate
-
-          const { translate: mainTranslate } = this.wrapperMain
-          const direction = mainTranslate >= changeTranslate ? 'left' : 'right'
-
+      // 화면보다 왼쪽으로 더 갔을 때
+      if (changeTranslate > start) {
+        if (changeTranslate < this.limitStart) {
           wrapperInfo.forEach(wrapper => {
-            const { translate: wrapTranslate, isMain, gap } = wrapper
+            wrapper.translate = changeTranslate
+          })
+        }
+      } else if (changeTranslate < -end) {
+        if (changeTranslate > -this.limitEnd) {
+          wrapperInfo.forEach(wrapper => {
+            wrapper.translate = changeTranslate + wrapper.gap * ratio
+          })
+        }
+      } else {
+        const { translate: mainTranslate } = this.wrapperMain
+        let translate = changeTranslate
+        direction = mainTranslate >= changeTranslate ? 'left' : 'right'
+
+        if ([null, direction].includes(this.beforeDirection)) {
+          wrapperInfo.forEach(wrapper => {
+            const { gap } = wrapper
             translate = changeTranslate + gap * ratio
-            if (!isMain) {
-              if (
-                (direction === 'left' && translate > wrapTranslate) ||
-                (direction === 'right' && translate < wrapTranslate)
-              ) {
-                translate = Number(wrapTranslate)
-              }
-            }
             wrapper.translate = translate.toFixed(2)
           })
         }
-        this.beforeChangeTranslate = changeTranslate
+        this.beforeDirection = direction
       }
     },
     setTranslateXEnd(changeTranslate) {
