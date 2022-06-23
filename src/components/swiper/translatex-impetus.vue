@@ -6,38 +6,24 @@
       class="slide-wrapper"
       :style="`transform: translateX(${wrapperInfo[0].translate}px)`"
     >
-      <button>Slide 1</button>
-      <!--      <button>Slide 슬라이드 2</button>-->
+      <button>Slide 11</button>
+      <button>Slide 12</button>
+      <button>Slide 13</button>
+      <button>Slide 14</button>
+      <button>Slide 15</button>
     </div>
     <div
       class="slide-wrapper"
       :style="`transform: translateX(${wrapperInfo[1].translate}px)`"
     >
-      <button>Slide 22</button>
-      <button>Slide 23</button>
-      <button>Slide 24</button>
-      <button>Slide 25</button>
-      <button>Slide 22</button>
-      <button>Slide 23</button>
-      <button>Slide 24</button>
-      <button>Slide 25</button>
-    </div>
-    <div
-      class="slide-wrapper"
-      :style="`transform: translateX(${wrapperInfo[2].translate}px)`"
-    >
       <button>Slide 32</button>
       <button>Slide 33</button>
       <button>Slide 34</button>
       <button>Slide 35</button>
-      <button>Slide 슬라 3</button>
-      <button>Slide 4</button>
-      <button>Slide 슬라이 5</button>
-      <button>Slide 1</button>
-      <button>Slide 슬라이드 2</button>
-      <button>Slide 슬라 3</button>
-      <button>Slide 4</button>
-      <button>Slide 슬라이 5</button>
+      <button>Slide 36</button>
+      <button>Slide 37</button>
+      <button>Slide 38</button>
+      <button>Slide 39</button>
     </div>
   </div>
 </template>
@@ -49,13 +35,14 @@ export default {
   data() {
     return {
       swiperInfo: {
-        wrapperInfo: [{ translate: 0 }, { translate: 0 }, { translate: 0 }],
+        wrapperInfo: [{ translate: 0 }, { translate: 0 }],
         start: 0,
         end: 0,
         max: 0,
         mainIdx: null
       },
       bodyPadding: 16,
+      addPadding: 42,
       beforeDirection: null,
       impetus: null
     }
@@ -67,8 +54,14 @@ export default {
     wrapperMain() {
       return this.wrapperInfo[this.swiperInfo.mainIdx]
     },
+    wrapperMainEl() {
+      return this.swiper.children[this.swiperInfo.mainIdx]
+    },
     limitStart() {
       return innerWidth / 2 - this.bodyPadding
+    },
+    limitEnd() {
+      return innerWidth / 2 - this.bodyPadding + this.swiperInfo.end
     },
     swiper() {
       return this.$refs.translateSwiper
@@ -90,50 +83,45 @@ export default {
           this.wrapperInfo[idx].width = node.offsetWidth
         })
       const swiperMax = Math.max(...this.wrapperInfo.map(({ width }) => width))
-      this.swiperInfo.max = swiperMax
-      this.swiperInfo.end = swiperMax - translateSwiper.offsetWidth
-      this.swiperInfo.mainIdx = this.wrapperInfo.findIndex(({ isMain: m }) => m)
       this.wrapperInfo.forEach(wrapper => {
         wrapper.isMain = wrapper.width / swiperMax === 1
         wrapper.gap = swiperMax - wrapper.width
       })
+      this.swiperInfo.max = swiperMax
+      this.swiperInfo.end = swiperMax - translateSwiper.offsetWidth
+      this.swiperInfo.mainIdx = this.wrapperInfo.findIndex(({ isMain: m }) => m)
+
       this.impetus = new Impetus({
         source: translateSwiper,
         update: x => {
           this.setTranslateX(x)
         },
-        boundX: [-this.swiperInfo.end, 0]
+        boundX: [-(this.swiperInfo.end + this.addPadding), 0]
       })
-    },
-    getLeft() {
-      const { mainIdx: idx } = this.swiperInfo
-      return this.swiper.children[idx].getBoundingClientRect().left
     },
     setTranslateX(changeTranslate) {
       const { start, end } = this.swiperInfo
       const wrapperInfo = this.wrapperInfo
-      const left = this.getLeft()
+      const left = this.wrapperMainEl.getBoundingClientRect().left
       let ratio = Math.abs((left - this.bodyPadding) / end)
       ratio = ratio > 1 ? 1 : ratio
+      let func
 
       // 화면보다 왼쪽으로 더 갔을 때
       if (changeTranslate > start) {
-        if (changeTranslate < this.limitStart) {
-          wrapperInfo.forEach(wrapper => {
-            wrapper.translate = changeTranslate
-          })
+        changeTranslate =
+          changeTranslate < this.limitStart ? changeTranslate : this.limitStart
+        func = wrapper => {
+          wrapper.translate = changeTranslate
         }
+      } else if (changeTranslate < -this.limitEnd) {
+        // 화면보다 오른쪽으로 더 갔을 때
       } else {
-        const { translate: mainTranslate } = this.wrapperMain
-        const direction = mainTranslate >= changeTranslate ? 'left' : 'right'
-
-        if ([null, direction].includes(this.beforeDirection)) {
-          wrapperInfo.forEach(wrapper => {
-            wrapper.translate = changeTranslate + wrapper.gap * ratio
-          })
+        func = wrapper => {
+          wrapper.translate = changeTranslate + wrapper.gap * ratio
         }
-        this.beforeDirection = direction
       }
+      func && wrapperInfo.forEach(func)
     }
   }
 }
