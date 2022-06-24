@@ -42,20 +42,15 @@ export default {
         mainIdx: null
       },
       bodyPadding: 16,
-      addPadding: 42,
-      beforeDirection: null,
+      hasPadding: 31,
+      wrapperMain: null,
+      wrapperMainEl: null,
       impetus: null
     }
   },
   computed: {
     wrapperInfo() {
       return this.swiperInfo.wrapperInfo
-    },
-    wrapperMain() {
-      return this.wrapperInfo[this.swiperInfo.mainIdx]
-    },
-    wrapperMainEl() {
-      return this.swiper.children[this.swiperInfo.mainIdx]
     },
     limitStart() {
       return innerWidth / 2 - this.bodyPadding
@@ -89,39 +84,60 @@ export default {
       })
       this.swiperInfo.max = swiperMax
       this.swiperInfo.end = swiperMax - translateSwiper.offsetWidth
-      this.swiperInfo.mainIdx = this.wrapperInfo.findIndex(({ isMain: m }) => m)
+      const mainIdx = this.wrapperInfo.findIndex(({ isMain }) => isMain)
+      this.swiperInfo.mainIdx = mainIdx
+      this.wrapperMain = this.wrapperInfo[mainIdx]
+      this.wrapperMainEl = this.swiper.children[mainIdx]
 
       this.impetus = new Impetus({
         source: translateSwiper,
+        multiplier: 1.3,
         update: x => {
           this.setTranslateX(x)
         },
-        boundX: [-(this.swiperInfo.end + this.addPadding), 0]
+        boundX: [-(this.swiperInfo.end + this.hasPadding), 0]
       })
+    },
+    getRatio() {
+      const { end } = this.swiperInfo
+      const left = this.wrapperMainEl.getBoundingClientRect().left
+      let ratio = Math.abs(left / end)
+      ratio = ratio > 1 ? 1 : ratio
+      return ratio
     },
     setTranslateX(changeTranslate) {
       const { start, end } = this.swiperInfo
-      const wrapperInfo = this.wrapperInfo
-      const left = this.wrapperMainEl.getBoundingClientRect().left
-      let ratio = Math.abs((left - this.bodyPadding) / end)
-      ratio = ratio > 1 ? 1 : ratio
-      let func
 
-      // 화면보다 왼쪽으로 더 갔을 때
       if (changeTranslate > start) {
-        changeTranslate =
-          changeTranslate < this.limitStart ? changeTranslate : this.limitStart
-        func = wrapper => {
-          wrapper.translate = changeTranslate
+        // 화면보다 왼쪽으로 더 갔을 때
+        if (changeTranslate > this.limitStart) {
+          changeTranslate = this.limitStart
         }
-      } else if (changeTranslate < -this.limitEnd) {
+        this.applyTranslate(changeTranslate)
+      } else if (changeTranslate < -end) {
         // 화면보다 오른쪽으로 더 갔을 때
-      } else {
-        func = wrapper => {
-          wrapper.translate = changeTranslate + wrapper.gap * ratio
+        if (changeTranslate < -this.limitEnd) {
+          changeTranslate = -this.limitEnd
+          this.applyTranslate(changeTranslate, 1)
+        } else {
+          this.applyTranslate(changeTranslate, this.getRatio())
         }
+      } else {
+        this.applyTranslate(changeTranslate, this.getRatio())
       }
-      func && wrapperInfo.forEach(func)
+    },
+    applyTranslate(changeTranslate, ratio) {
+      const wrapperInfo = this.wrapperInfo
+
+      if (ratio) {
+        wrapperInfo.forEach(wrapper => {
+          wrapper.translate = changeTranslate + wrapper.gap * ratio
+        })
+      } else {
+        wrapperInfo.forEach(wrapper => {
+          wrapper.translate = changeTranslate
+        })
+      }
     }
   }
 }
