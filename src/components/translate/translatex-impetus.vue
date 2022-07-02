@@ -120,6 +120,7 @@ export default {
           changeTranslate = -this.limitEnd
           this.applyTranslate(changeTranslate, 1)
         } else {
+          console.log(changeTranslate, this.getRatio())
           this.applyTranslate(changeTranslate, this.getRatio())
         }
       } else {

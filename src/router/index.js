@@ -17,6 +17,11 @@ const router = createRouter({
       component: () => import('@/views/AboutView.vue')
     },
     {
+      path: '/translate',
+      name: 'translate',
+      component: () => import('@/views/TranslateView.vue')
+    },
+    {
       path: '/swiper',
       name: 'swiper',
       component: () => import('@/views/SwiperView.vue')
